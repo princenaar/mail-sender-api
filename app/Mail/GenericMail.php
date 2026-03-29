@@ -2,7 +2,6 @@
 
 namespace App\Mail;
 
-use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Attachment;
 use Illuminate\Mail\Mailables\Content;
@@ -11,7 +10,7 @@ use Illuminate\Queue\SerializesModels;
 
 class GenericMail extends Mailable
 {
-    use Queueable, SerializesModels;
+    use SerializesModels;
 
     public function __construct(
         private readonly string  $emailSubject,
@@ -47,7 +46,7 @@ class GenericMail extends Mailable
     {
         return array_map(
             fn (array $a) => Attachment::fromData(
-                fn () => base64_decode($a['content']),
+                fn () => base64_decode($a['content'], strict: true),
                 $a['name'],
             )->withMime($a['mime']),
             $this->emailAttachments,

@@ -2,8 +2,8 @@
 
 namespace Tests\Unit;
 
+use App\Mail\GenericMail;
 use App\Services\MailService;
-use Illuminate\Mail\Mailable;
 use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
@@ -30,7 +30,7 @@ class MailServiceTest extends TestCase
             attachments: [],
         );
 
-        Mail::assertSent(Mailable::class, function (Mailable $mail) {
+        Mail::assertSent(GenericMail::class, function (GenericMail $mail) {
             return in_array('alice@example.com', array_column($mail->to, 'address'));
         });
     }
@@ -47,7 +47,7 @@ class MailServiceTest extends TestCase
             attachments: [],
         );
 
-        Mail::assertSent(Mailable::class, function (Mailable $mail) {
+        Mail::assertSent(GenericMail::class, function (GenericMail $mail) {
             return in_array('bob@example.com', array_column($mail->to, 'address'));
         });
     }
@@ -64,7 +64,7 @@ class MailServiceTest extends TestCase
             attachments: [],
         );
 
-        Mail::assertSent(Mailable::class, function (Mailable $mail) {
+        Mail::assertSent(GenericMail::class, function (GenericMail $mail) {
             return in_array('cc@example.com', array_column($mail->cc, 'address'))
                 && in_array('bcc@example.com', array_column($mail->bcc, 'address'));
         });
@@ -89,7 +89,7 @@ class MailServiceTest extends TestCase
         );
 
         // Verifies that base64 decode + attachData runs without exception
-        Mail::assertSent(Mailable::class);
+        Mail::assertSent(GenericMail::class);
     }
 
     public function test_sends_to_multiple_recipients(): void
@@ -104,7 +104,7 @@ class MailServiceTest extends TestCase
             attachments: [],
         );
 
-        Mail::assertSent(Mailable::class, function (Mailable $mail) {
+        Mail::assertSent(GenericMail::class, function (GenericMail $mail) {
             $addresses = array_column($mail->to, 'address');
             return in_array('alice@example.com', $addresses)
                 && in_array('bob@example.com', $addresses);
