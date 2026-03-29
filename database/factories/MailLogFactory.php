@@ -11,6 +11,8 @@ use Illuminate\Database\Eloquent\Factories\Factory;
  */
 class MailLogFactory extends Factory
 {
+    protected $model = MailLog::class;
+
     public function definition(): array
     {
         return [
@@ -39,6 +41,7 @@ class MailLogFactory extends Factory
         return $this->state(fn (array $attributes) => [
             'status'        => MailStatus::Failed,
             'error_message' => fake()->sentence(),
+            'sent_at'       => null,
         ]);
     }
 }
