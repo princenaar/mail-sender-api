@@ -4,11 +4,11 @@ namespace Tests\Feature;
 
 use App\Enums\MailStatus;
 use App\Jobs\SendMailJob;
+use App\Mail\GenericMail;
 use App\Models\MailLog;
 use App\Services\MailService;
 use Exception;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Mail\Mailable;
 use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
@@ -34,7 +34,7 @@ class SendMailJobTest extends TestCase
         $this->assertEquals(MailStatus::Sent, $log->status);
         $this->assertNotNull($log->sent_at);
         $this->assertNull($log->error_message);
-        Mail::assertSent(Mailable::class);
+        Mail::assertSent(GenericMail::class, fn ($mail) => $mail->hasTo('alice@example.com'));
     }
 
     public function test_handle_sets_sent_at_timestamp(): void
@@ -76,12 +76,11 @@ class SendMailJobTest extends TestCase
 
     public function test_failed_does_not_throw_when_log_not_found(): void
     {
+        $this->expectNotToPerformAssertions();
+
         // Verifies that failed() uses where()->update() not findOrFail()
         $job = new SendMailJob(99999);
         $job->failed(new Exception('Some error'));
-
-        // No exception = pass
-        $this->assertTrue(true);
     }
 
     public function test_job_has_correct_retry_configuration(): void
