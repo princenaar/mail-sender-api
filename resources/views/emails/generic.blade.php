@@ -34,7 +34,7 @@
                             style="background-color:#0d3b6e;padding:32px 40px 24px;">
                             <!-- Logo -->
                             <img class="logo"
-                                 src="{{ config('app.url') }}/images/mshp-logo.png"
+                                 src="{{ config('app.url') }}/images/mshp_logo.png"
                                  alt="MSHP Logo"
                                  width="160"
                                  style="display:block;margin:0 auto 16px;max-width:160px;height:auto;">
