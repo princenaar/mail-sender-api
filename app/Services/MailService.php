@@ -8,34 +8,40 @@ use Illuminate\Support\Facades\Mail;
 class MailService
 {
     /**
-     * @param  array<string>       $to
+     * @param  array<string>  $to
      * @param  array<string>|null  $cc
      * @param  array<string>|null  $bcc
-     * @param  array<array{name: string, content: string, mime: string}>  $attachments
+     * @param  array<array{
+     *     name: string,
+     *     content: string,
+     *     mime: string,
+     *     disposition?: 'attachment'|'inline',
+     *     content_id?: string
+     * }>  $attachments
      */
     public function send(
-        array   $to,
-        ?array  $cc,
-        ?array  $bcc,
-        string  $subject,
+        array $to,
+        ?array $cc,
+        ?array $bcc,
+        string $subject,
         ?string $textBody,
         ?string $htmlBody,
-        array   $attachments,
+        array $attachments,
     ): void {
         $mailable = new GenericMail(
-            emailSubject:     $subject,
-            textBody:         $textBody,
-            htmlBody:         $htmlBody,
+            emailSubject: $subject,
+            textBody: $textBody,
+            htmlBody: $htmlBody,
             emailAttachments: $attachments,
         );
 
         $mailer = Mail::to($to);
 
-        if (!empty($cc)) {
+        if (! empty($cc)) {
             $mailer = $mailer->cc($cc);
         }
 
-        if (!empty($bcc)) {
+        if (! empty($bcc)) {
             $mailer = $mailer->bcc($bcc);
         }
 

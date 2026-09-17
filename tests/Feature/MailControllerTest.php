@@ -3,10 +3,12 @@
 namespace Tests\Feature;
 
 use App\Enums\MailStatus;
+use App\Http\Requests\SendMailRequest;
 use App\Jobs\SendMailJob;
 use App\Models\MailLog;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Facades\Validator;
 use Tests\TestCase;
 
 class MailControllerTest extends TestCase
@@ -18,8 +20,8 @@ class MailControllerTest extends TestCase
     private function validPayload(array $overrides = []): array
     {
         return array_merge([
-            'to'        => ['alice@example.com'],
-            'subject'   => 'Hello World',
+            'to' => ['alice@example.com'],
+            'subject' => 'Hello World',
             'text_body' => 'Plain text body',
         ], $overrides);
     }
@@ -40,8 +42,8 @@ class MailControllerTest extends TestCase
         );
 
         $response->assertStatus(202)
-                 ->assertJsonStructure(['message', 'mail_log_id'])
-                 ->assertJsonFragment(['message' => 'Mail queued for delivery.']);
+            ->assertJsonStructure(['message', 'mail_log_id'])
+            ->assertJsonFragment(['message' => 'Mail queued for delivery.']);
     }
 
     public function test_creates_a_pending_mail_log(): void
@@ -51,7 +53,7 @@ class MailControllerTest extends TestCase
         $this->postJson(
             '/api/v1/mails/send',
             $this->validPayload([
-                'to'      => ['alice@example.com', 'bob@example.com'],
+                'to' => ['alice@example.com', 'bob@example.com'],
                 'subject' => 'My Subject',
             ]),
             $this->authHeaders(),
@@ -59,7 +61,7 @@ class MailControllerTest extends TestCase
 
         $this->assertDatabaseHas('mail_logs', [
             'subject' => 'My Subject',
-            'status'  => MailStatus::Pending->value,
+            'status' => MailStatus::Pending->value,
         ]);
 
         $log = MailLog::first();
@@ -85,7 +87,7 @@ class MailControllerTest extends TestCase
         $response = $this->postJson('/api/v1/mails/send', $this->validPayload());
 
         $response->assertStatus(401)
-                 ->assertJson(['error' => 'Unauthorized.']);
+            ->assertJson(['error' => 'Unauthorized.']);
     }
 
     public function test_returns_401_when_token_is_wrong(): void
@@ -110,7 +112,7 @@ class MailControllerTest extends TestCase
         );
 
         $response->assertStatus(422)
-                 ->assertJsonValidationErrors(['to']);
+            ->assertJsonValidationErrors(['to']);
     }
 
     public function test_returns_422_when_to_contains_invalid_email(): void
@@ -124,7 +126,7 @@ class MailControllerTest extends TestCase
         );
 
         $response->assertStatus(422)
-                 ->assertJsonValidationErrors(['to.0']);
+            ->assertJsonValidationErrors(['to.0']);
     }
 
     public function test_returns_422_when_subject_is_missing(): void
@@ -138,7 +140,7 @@ class MailControllerTest extends TestCase
         );
 
         $response->assertStatus(422)
-                 ->assertJsonValidationErrors(['subject']);
+            ->assertJsonValidationErrors(['subject']);
     }
 
     public function test_returns_422_when_both_body_fields_are_missing(): void
@@ -152,7 +154,7 @@ class MailControllerTest extends TestCase
         );
 
         $response->assertStatus(422)
-                 ->assertJsonValidationErrors(['text_body', 'html_body']);
+            ->assertJsonValidationErrors(['text_body', 'html_body']);
     }
 
     public function test_accepts_html_body_without_text_body(): void
@@ -179,7 +181,7 @@ class MailControllerTest extends TestCase
         );
 
         $response->assertStatus(422)
-                 ->assertJsonValidationErrors(['cc.0']);
+            ->assertJsonValidationErrors(['cc.0']);
     }
 
     public function test_returns_422_when_attachment_missing_required_fields(): void
@@ -195,7 +197,90 @@ class MailControllerTest extends TestCase
         );
 
         $response->assertStatus(422)
-                 ->assertJsonValidationErrors(['attachments.0.content', 'attachments.0.mime']);
+            ->assertJsonValidationErrors(['attachments.0.content', 'attachments.0.mime']);
+    }
+
+    public function test_accepts_inline_attachment_with_content_id(): void
+    {
+        Queue::fake();
+
+        $response = $this->postJson(
+            '/api/v1/mails/send',
+            $this->validPayload([
+                'attachments' => [[
+                    'name' => 'banner_mirsas.png',
+                    'content' => base64_encode('fake-png'),
+                    'mime' => 'image/png',
+                    'disposition' => 'inline',
+                    'content_id' => 'mirsas-logo@mirsas',
+                ]],
+            ]),
+            $this->authHeaders(),
+        );
+
+        $response->assertStatus(202);
+        Queue::assertPushed(SendMailJob::class);
+    }
+
+    public function test_rejects_inline_attachment_without_content_id(): void
+    {
+        Queue::fake();
+
+        $response = $this->postJson(
+            '/api/v1/mails/send',
+            $this->validPayload([
+                'attachments' => [[
+                    'name' => 'banner_mirsas.png',
+                    'content' => base64_encode('fake-png'),
+                    'mime' => 'image/png',
+                    'disposition' => 'inline',
+                ]],
+            ]),
+            $this->authHeaders(),
+        );
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['attachments.0.content_id']);
+    }
+
+    public function test_rejects_unknown_attachment_disposition(): void
+    {
+        Queue::fake();
+
+        $response = $this->postJson(
+            '/api/v1/mails/send',
+            $this->validPayload([
+                'attachments' => [[
+                    'name' => 'file.txt',
+                    'content' => base64_encode('content'),
+                    'mime' => 'text/plain',
+                    'disposition' => 'embedded',
+                ]],
+            ]),
+            $this->authHeaders(),
+        );
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['attachments.0.disposition']);
+    }
+
+    public function test_rejects_content_id_with_trailing_line_break(): void
+    {
+        $validator = Validator::make(
+            $this->validPayload([
+                'attachments' => [[
+                    'name' => 'banner_mirsas.png',
+                    'content' => base64_encode('fake-png'),
+                    'mime' => 'image/png',
+                    'disposition' => 'inline',
+                    'content_id' => "mirsas-logo@mirsas\n",
+                ]],
+            ]),
+            (new SendMailRequest)->rules(),
+        );
+
+        $this->assertTrue($validator->fails());
+        $this->assertArrayHasKey('attachments.0.content_id', $validator->errors()->toArray());
     }
 
     public function test_stores_html_body_in_mail_log(): void
@@ -210,7 +295,7 @@ class MailControllerTest extends TestCase
 
         $this->assertDatabaseHas('mail_logs', [
             'html_body' => '<h1>Hello</h1>',
-            'subject'   => 'HTML Test',
+            'subject' => 'HTML Test',
         ]);
     }
 }

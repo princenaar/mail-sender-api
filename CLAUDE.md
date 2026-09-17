@@ -87,6 +87,8 @@ Browser → GET /logs → MailLogController → mail_logs → Blade view
 | `attachments[].name` | string |
 | `attachments[].content` | Base64-encoded file |
 | `attachments[].mime` | MIME type string |
+| `attachments[].disposition` | Optional `attachment` (default) or `inline` |
+| `attachments[].content_id` | Required for inline attachments; valid MIME Content-ID |
 
 Attachment size limit: 5 MB per file (recommended).
 
