@@ -32,12 +32,6 @@
                     <tr>
                         <td class="header-cell" align="center"
                             style="background-color:#0d3b6e;padding:32px 40px 24px;">
-                            <!-- Logo -->
-                            <img class="logo"
-                                 src="{{ config('app.url') }}/images/mshp_logo.png"
-                                 alt="MSHP Logo"
-                                 width="160"
-                                 style="display:block;margin:0 auto 16px;max-width:160px;height:auto;">
                             <!-- Divider -->
                             <table width="60" cellpadding="0" cellspacing="0" border="0" style="margin:0 auto 16px;">
                                 <tr>
