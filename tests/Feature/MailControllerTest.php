@@ -3,10 +3,12 @@
 namespace Tests\Feature;
 
 use App\Enums\MailStatus;
+use App\Http\Requests\SendMailRequest;
 use App\Jobs\SendMailJob;
 use App\Models\MailLog;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Facades\Validator;
 use Tests\TestCase;
 
 class MailControllerTest extends TestCase
@@ -260,6 +262,25 @@ class MailControllerTest extends TestCase
 
         $response->assertStatus(422)
             ->assertJsonValidationErrors(['attachments.0.disposition']);
+    }
+
+    public function test_rejects_content_id_with_trailing_line_break(): void
+    {
+        $validator = Validator::make(
+            $this->validPayload([
+                'attachments' => [[
+                    'name' => 'banner_mirsas.png',
+                    'content' => base64_encode('fake-png'),
+                    'mime' => 'image/png',
+                    'disposition' => 'inline',
+                    'content_id' => "mirsas-logo@mirsas\n",
+                ]],
+            ]),
+            (new SendMailRequest)->rules(),
+        );
+
+        $this->assertTrue($validator->fails());
+        $this->assertArrayHasKey('attachments.0.content_id', $validator->errors()->toArray());
     }
 
     public function test_stores_html_body_in_mail_log(): void

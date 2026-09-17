@@ -32,7 +32,7 @@ class SendMailRequest extends FormRequest
                 'nullable',
                 'string',
                 'required_if:attachments.*.disposition,inline',
-                'regex:/^[A-Za-z0-9][A-Za-z0-9._-]*@[A-Za-z0-9][A-Za-z0-9.-]*$/',
+                'regex:/^[A-Za-z0-9][A-Za-z0-9._-]*@[A-Za-z0-9][A-Za-z0-9.-]*\z/',
             ],
         ];
     }
