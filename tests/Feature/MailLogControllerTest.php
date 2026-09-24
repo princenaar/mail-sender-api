@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Enums\MailStatus;
 use App\Models\MailLog;
+use App\Support\MailLogsAuthentication;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -16,7 +17,7 @@ class MailLogControllerTest extends TestCase
         parent::setUp();
 
         config(['services.mail_logs_password' => 'test-password']);
-        $this->withSession(['mail_logs_authenticated' => true]);
+        $this->withSession([MailLogsAuthentication::SESSION_KEY => MailLogsAuthentication::fingerprint()]);
     }
 
     public function test_logs_page_returns_200(): void

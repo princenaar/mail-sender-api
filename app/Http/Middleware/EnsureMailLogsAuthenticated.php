@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Support\MailLogsAuthentication;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -10,11 +11,13 @@ class EnsureMailLogsAuthenticated
 {
     public function handle(Request $request, Closure $next): Response
     {
-        if (blank(config('services.mail_logs_password'))) {
+        if (! MailLogsAuthentication::isConfigured()) {
             abort(503, 'The mail logs password is not configured.');
         }
 
-        if (! $request->session()->get('mail_logs_authenticated', false)) {
+        if (! MailLogsAuthentication::isAuthenticated($request)) {
+            $request->session()->forget(MailLogsAuthentication::SESSION_KEY);
+
             return redirect()->route('logs.login');
         }
 

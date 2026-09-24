@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Support\MailLogsAuthentication;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -47,17 +48,26 @@ class MailLogsAuthenticationTest extends TestCase
     {
         $this->post('/logs/login', ['password' => 'test-password'])
             ->assertRedirect(route('logs.index'))
-            ->assertSessionHas('mail_logs_authenticated', true);
+            ->assertSessionHas(MailLogsAuthentication::SESSION_KEY, MailLogsAuthentication::fingerprint());
 
         $this->get('/logs')->assertOk();
     }
 
+    public function test_changing_password_revokes_existing_session(): void
+    {
+        $this->post('/logs/login', ['password' => 'test-password'])->assertRedirect(route('logs.index'));
+
+        config(['services.mail_logs_password' => 'new-password']);
+
+        $this->get('/logs')->assertRedirect('/logs/login');
+    }
+
     public function test_logout_clears_authentication(): void
     {
-        $this->withSession(['mail_logs_authenticated' => true])
+        $this->withSession([MailLogsAuthentication::SESSION_KEY => MailLogsAuthentication::fingerprint()])
             ->post('/logs/logout')
             ->assertRedirect('/logs/login')
-            ->assertSessionMissing('mail_logs_authenticated');
+            ->assertSessionMissing(MailLogsAuthentication::SESSION_KEY);
 
         $this->get('/logs')->assertRedirect('/logs/login');
     }
