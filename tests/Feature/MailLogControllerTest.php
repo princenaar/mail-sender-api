@@ -4,12 +4,21 @@ namespace Tests\Feature;
 
 use App\Enums\MailStatus;
 use App\Models\MailLog;
+use App\Support\MailLogsAuthentication;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 class MailLogControllerTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        config(['services.mail_logs_password' => 'test-password']);
+        $this->withSession([MailLogsAuthentication::SESSION_KEY => MailLogsAuthentication::fingerprint()]);
+    }
 
     public function test_logs_page_returns_200(): void
     {
@@ -28,6 +37,22 @@ class MailLogControllerTest extends TestCase
         MailLog::factory()->create(['to' => ['recipient@example.com']]);
 
         $this->get('/logs')->assertSee('recipient@example.com');
+    }
+
+    public function test_logs_table_includes_all_recipients_for_datatables_search(): void
+    {
+        MailLog::factory()->create([
+            'to' => ['to@example.com'],
+            'cc' => ['cc@example.com'],
+            'bcc' => ['bcc@example.com'],
+        ]);
+
+        $this->get('/logs')
+            ->assertSee('to@example.com')
+            ->assertSee('cc@example.com')
+            ->assertSee('bcc@example.com')
+            ->assertSee("new DataTable('#mail-logs'", false)
+            ->assertSee("targets: [0, 2, 3, 4, 5, 6], searchable: false", false);
     }
 
     public function test_logs_page_shows_pending_badge(): void
@@ -51,26 +76,47 @@ class MailLogControllerTest extends TestCase
         $this->get('/logs')->assertSee('failed');
     }
 
+    public function test_logs_page_displays_specific_mail_failure_reason(): void
+    {
+        MailLog::factory()->failed()->create([
+            'error_message' => '550 5.1.1 user unknown',
+        ]);
+
+        $this->get('/logs')->assertSee('Adresse du destinataire inexistante.');
+    }
+
+    public function test_logs_page_falls_back_to_original_mail_error(): void
+    {
+        MailLog::factory()->failed()->create([
+            'error_message' => 'SMTP connection refused',
+        ]);
+
+        $this->get('/logs')->assertSee('SMTP connection refused');
+    }
+
+    public function test_logs_page_displays_mailbox_full_reason(): void
+    {
+        MailLog::factory()->failed()->create([
+            'error_message' => '452 5.2.2 mailbox full',
+        ]);
+
+        $this->get('/logs')->assertSee('Boîte de réception pleine (quota dépassé).');
+    }
+
     public function test_empty_logs_page_shows_no_records_message(): void
     {
         $this->get('/logs')->assertSee('No mail logs found');
     }
 
-    public function test_pagination_with_30_records_returns_200(): void
+    public function test_datatables_receives_all_logs_for_client_side_pagination(): void
     {
-        MailLog::factory()->count(30)->create();
+        MailLog::factory()->count(29)->create();
+        MailLog::factory()->create(['subject' => 'Last DataTables Row']);
 
         $this->get('/logs')->assertStatus(200);
-        $this->get('/logs?page=2')->assertStatus(200);
-    }
-
-    public function test_page_2_does_not_show_all_30_subjects(): void
-    {
-        MailLog::factory()->count(30)->create();
-
-        $response = $this->get('/logs?page=2');
-        $response->assertStatus(200);
-        $response->assertDontSee('No mail logs found');
+        $this->get('/logs')
+            ->assertSee('Last DataTables Row')
+            ->assertSee("order: [[6, 'desc']]", false);
     }
 
     public function test_logs_page_shows_text_body_preview(): void
