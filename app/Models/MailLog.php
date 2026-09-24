@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\MailStatus;
+use App\Support\MailFailureReason;
 use Database\Factories\MailLogFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -27,5 +28,14 @@ class MailLog extends Model
             'status'  => MailStatus::class,
             'sent_at' => 'datetime',
         ];
+    }
+
+    public function getFailureReasonAttribute(): ?string
+    {
+        if ($this->status !== MailStatus::Failed || blank($this->error_message)) {
+            return null;
+        }
+
+        return MailFailureReason::fromMessage($this->error_message) ?? $this->error_message;
     }
 }

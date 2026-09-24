@@ -9,7 +9,7 @@ class MailLogController extends Controller
 {
     public function index(): View
     {
-        $logs = MailLog::orderByDesc('created_at')->paginate(25);
+        $logs = MailLog::orderByDesc('created_at')->get();
 
         return view('logs.index', compact('logs'));
     }

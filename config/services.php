@@ -37,4 +37,6 @@ return [
 
     'mail_api_token' => env('MAIL_API_TOKEN'),
 
+    'mail_logs_password' => env('MAIL_LOGS_PASSWORD'),
+
 ];
